@@ -8,6 +8,11 @@ export type BuilderOutput = {
   didChange: boolean;
   summary: string;
   diff: string;
+  llm?: {
+    model?: string;
+    usage?: unknown;
+    requestId?: string;
+  };
 };
 
 export interface Builder {

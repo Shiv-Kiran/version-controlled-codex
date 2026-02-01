@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 export type GitRunOptions = {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
+  input?: string;
 };
 
 export type GitResult = {
@@ -44,6 +45,7 @@ export function runGit(args: string[], options: GitRunOptions = {}): GitResult {
     cwd: options.cwd,
     env: options.env,
     encoding: 'utf8',
+    input: options.input,
   });
 
   if (result.error) {
@@ -66,6 +68,16 @@ export function runGit(args: string[], options: GitRunOptions = {}): GitResult {
   }
 
   return { stdout, stderr };
+}
+
+export function applyPatch(patch: string, options: GitRunOptions = {}): void {
+  if (!patch.trim()) {
+    return;
+  }
+  runGit(['apply', '--whitespace=nowarn', '-'], {
+    ...options,
+    input: patch,
+  });
 }
 
 export function isGitRepo(options: GitRunOptions = {}): boolean {

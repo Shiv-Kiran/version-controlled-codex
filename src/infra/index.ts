@@ -1,5 +1,6 @@
 ﻿export {
   addChanges,
+  applyPatch,
   checkoutBranch,
   commitChanges,
   createBranch,

@@ -6,3 +6,5 @@ export type { Scribe, ScribeInput, ScribeOutput } from './scribe';
 export { NoopScribe } from './scribe';
 export type { AgentPipelineInput, AgentPipelineOutput } from './pipeline';
 export { runAgentPipeline } from './pipeline';
+export { OpenAIBuilder } from './openai-builder';
+export type { OpenAIBuilderOptions } from './openai-builder';
