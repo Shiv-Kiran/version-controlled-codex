@@ -1,6 +1,7 @@
-﻿import { Command, Flags } from '@oclif/core';
+﻿import { Flags } from '@oclif/core';
+import { BaseCommand } from '../base-command';
 
-export default class Save extends Command {
+export default class Save extends BaseCommand {
   static summary = 'Generate a PR description from the session traces.';
   static description =
     'Collate trace summaries into a PR_DESCRIPTION.md for review.';
@@ -10,6 +11,7 @@ export default class Save extends Command {
   ];
 
   static flags = {
+    ...BaseCommand.baseFlags,
     output: Flags.string({
       description: 'Optional output file path',
     }),
@@ -20,6 +22,7 @@ export default class Save extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Save);
+    this.loadContext(flags);
     this.log(
       `Not implemented: save output=${flags.output ?? 'PR_DESCRIPTION.md'} session=${flags.session ?? 'current'}`
     );

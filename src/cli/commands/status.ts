@@ -1,6 +1,7 @@
-﻿import { Command, Flags } from '@oclif/core';
+﻿import { Flags } from '@oclif/core';
+import { BaseCommand } from '../base-command';
 
-export default class Status extends Command {
+export default class Status extends BaseCommand {
   static summary = 'Show the current ledger session status.';
   static description =
     'Display active session metadata and branch mapping information.';
@@ -10,6 +11,7 @@ export default class Status extends Command {
   ];
 
   static flags = {
+    ...BaseCommand.baseFlags,
     json: Flags.boolean({
       default: false,
       description: 'Output machine-readable JSON',
@@ -21,6 +23,7 @@ export default class Status extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(Status);
+    this.loadContext(flags);
     if (flags.json) {
       this.log(
         JSON.stringify({

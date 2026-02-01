@@ -1,6 +1,7 @@
-﻿import { Args, Command, Flags } from '@oclif/core';
+﻿import { Args, Flags } from '@oclif/core';
+import { BaseCommand } from '../base-command';
 
-export default class Start extends Command {
+export default class Start extends BaseCommand {
   static summary = 'Initialize a new AI session branch.';
   static description =
     'Create or switch to an AI session branch and record session metadata.';
@@ -18,6 +19,7 @@ export default class Start extends Command {
   };
 
   static flags = {
+    ...BaseCommand.baseFlags,
     explore: Flags.boolean({
       default: false,
       description: 'Start in explore mode',
@@ -35,6 +37,7 @@ export default class Start extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(Start);
+    this.loadContext(flags);
     this.log(
       `Not implemented: start task="${args.task}" explore=${flags.explore} branch=${flags.branch ?? 'auto'} base=${flags.base ?? 'current'} session=${flags.session ?? 'auto'}`
     );

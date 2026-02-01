@@ -1,6 +1,7 @@
-﻿import { Args, Command, Flags } from '@oclif/core';
+﻿import { Args, Flags } from '@oclif/core';
+import { BaseCommand } from '../base-command';
 
-export default class DoCommand extends Command {
+export default class DoCommand extends BaseCommand {
   static summary = 'Execute an AI-assisted change.';
   static description =
     'Run the agent loop for the given prompt and apply changes to the working tree.';
@@ -18,6 +19,7 @@ export default class DoCommand extends Command {
   };
 
   static flags = {
+    ...BaseCommand.baseFlags,
     explore: Flags.boolean({
       default: false,
       description: 'Run in explore mode',
@@ -37,6 +39,7 @@ export default class DoCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(DoCommand);
+    this.loadContext(flags);
     this.log(
       `Not implemented: do prompt="${args.prompt}" explore=${flags.explore} session=${flags.session ?? 'auto'} confirm=${flags.confirm} dryRun=${flags.dryRun}`
     );
