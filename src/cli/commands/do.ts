@@ -1,5 +1,16 @@
 ﻿import { Args, Flags } from '@oclif/core';
 import { BaseCommand } from '../base-command';
+import { ensureCleanWorkingTree, ensureGitRepo, resolveSessionPlan } from '../../core';
+import {
+  addChanges,
+  checkoutBranch,
+  commitChanges,
+  getCurrentBranch,
+  getDiff,
+  getHeadCommitHash,
+} from '../../infra';
+import { OpenAIBuilder, OpenAIScribe } from '../../agents';
+import { hashPrompt, upsertSession, writeTraceMarkdown, writeTraceMeta } from '../../ledger';
 
 export default class DoCommand extends BaseCommand {
   static summary = 'Execute an AI-assisted change.';
@@ -39,9 +50,122 @@ export default class DoCommand extends BaseCommand {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(DoCommand);
-    this.loadContext(flags);
-    this.log(
-      `Not implemented: do prompt="${args.prompt}" explore=${flags.explore} session=${flags.session ?? 'auto'} confirm=${flags.confirm} dryRun=${flags.dryRun}`
+    const { config, logger } = this.loadContext(flags);
+    const cwd = process.cwd();
+
+    ensureGitRepo({ cwd });
+    ensureCleanWorkingTree({ cwd });
+
+    const currentBranch = getCurrentBranch({ cwd });
+    const plan = resolveSessionPlan({
+      task: args.prompt,
+      currentBranch,
+      explore: flags.explore,
+      sessionIdOverride: flags.session,
+    });
+
+    if (plan.action === 'create') {
+      if (plan.baseBranch !== currentBranch) {
+        checkoutBranch(plan.baseBranch, { cwd });
+      }
+      checkoutBranch(plan.branchName, { cwd, create: true });
+      logger.info(`Created session branch ${plan.branchName}`);
+    }
+
+    const builder = new OpenAIBuilder({
+      client: {
+        apiKey: config.openai?.apiKey,
+        baseUrl: config.openai?.baseUrl,
+        organization: config.openai?.organization,
+        project: config.openai?.project,
+        model: config.openai?.model,
+      },
+      model: config.openai?.model,
+      applyPatch: !flags.dryRun,
+    });
+
+    const builderResult = await builder.build({
+      prompt: args.prompt,
+      cwd,
+      sessionId: plan.sessionId,
+    });
+
+    if (!builderResult.didChange) {
+      logger.info('No changes produced by builder.');
+      return;
+    }
+
+    const diff = getDiff({ cwd });
+    if (!diff.trim()) {
+      logger.info('No diff detected after applying patch.');
+      return;
+    }
+
+    if (flags.dryRun) {
+      logger.info('Dry run enabled. Skipping commit and trace write.');
+      logger.info(`Builder summary: ${builderResult.summary}`);
+      return;
+    }
+
+    const scribe = new OpenAIScribe({
+      client: {
+        apiKey: config.openai?.apiKey,
+        baseUrl: config.openai?.baseUrl,
+        organization: config.openai?.organization,
+        project: config.openai?.project,
+        model: config.openai?.model,
+      },
+      model: config.openai?.model,
+    });
+
+    const scribeResult = await scribe.describe({
+      prompt: args.prompt,
+      diff,
+      sessionId: plan.sessionId,
+    });
+
+    addChanges({ cwd });
+    commitChanges({ cwd, message: scribeResult.commitMessage });
+    const commitHash = getHeadCommitHash({ cwd });
+
+    const promptHash = hashPrompt(args.prompt);
+    writeTraceMarkdown(
+      commitHash,
+      {
+        summary: builderResult.summary,
+        risk: 'Low',
+        details: scribeResult.reasoning,
+      },
+      cwd
     );
+    writeTraceMeta(
+      {
+        commitHash,
+        sessionId: plan.sessionId,
+        promptHash,
+        createdAt: new Date().toISOString(),
+        model: scribeResult.llm?.model ?? builderResult.llm?.model,
+        llm: scribeResult.llm ?? builderResult.llm,
+        builderLlm: builderResult.llm,
+        scribeLlm: scribeResult.llm,
+      },
+      cwd
+    );
+
+    upsertSession(
+      {
+        sessionId: plan.sessionId,
+        branch: plan.branchName,
+        startedAt: new Date().toISOString(),
+        lastPromptSummary: builderResult.summary,
+        status: 'active',
+      },
+      cwd
+    );
+
+    logger.info(`Committed to ${plan.branchName} as ${commitHash}: ${scribeResult.commitMessage}`);
+    if (flags.confirm) {
+      logger.info('Confirm flag is currently informational only.');
+    }
   }
 }

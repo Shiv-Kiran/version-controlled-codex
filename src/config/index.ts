@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
 import path from 'node:path';
 import type { LogFormat, LogLevel } from '../shared/logger';
 
@@ -6,6 +6,8 @@ export type LedgerConfig = {
   openai?: {
     apiKey?: string;
     baseUrl?: string;
+    organization?: string;
+    project?: string;
     model?: string;
   };
   logging?: {
@@ -80,6 +82,8 @@ export function loadConfig(options: LoadConfigOptions = {}): {
     openai: {
       apiKey: env.OPENAI_API_KEY,
       baseUrl: env.OPENAI_BASE_URL,
+      organization: env.OPENAI_ORGANIZATION,
+      project: env.OPENAI_PROJECT,
       model: env.OPENAI_MODEL,
     },
     logging: {
@@ -105,6 +109,8 @@ export function loadConfig(options: LoadConfigOptions = {}): {
       fromEnv: Boolean(
         env.OPENAI_API_KEY ||
           env.OPENAI_BASE_URL ||
+          env.OPENAI_ORGANIZATION ||
+          env.OPENAI_PROJECT ||
           env.OPENAI_MODEL ||
           env.CODEX_LEDGER_LOG_LEVEL ||
           env.CODEX_LEDGER_LOG_FORMAT ||

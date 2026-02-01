@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
 import crypto from 'node:crypto';
 import {
   resolveLedgerPaths,
@@ -21,6 +21,8 @@ export type TraceMeta = {
   model?: string;
   tokens?: number;
   llm?: LlmMetadata;
+  builderLlm?: LlmMetadata;
+  scribeLlm?: LlmMetadata;
   createdAt: string;
 };
 
