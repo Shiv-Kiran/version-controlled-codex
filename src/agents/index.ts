@@ -8,3 +8,5 @@ export type { AgentPipelineInput, AgentPipelineOutput } from './pipeline';
 export { runAgentPipeline } from './pipeline';
 export { OpenAIBuilder } from './openai-builder';
 export type { OpenAIBuilderOptions } from './openai-builder';
+export { OpenAIScribe } from './openai-scribe';
+export type { OpenAIScribeOptions } from './openai-scribe';

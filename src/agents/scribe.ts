@@ -7,6 +7,11 @@ export type ScribeInput = {
 export type ScribeOutput = {
   commitMessage: string;
   reasoning: string;
+  llm?: {
+    model?: string;
+    usage?: unknown;
+    requestId?: string;
+  };
 };
 
 export interface Scribe {
