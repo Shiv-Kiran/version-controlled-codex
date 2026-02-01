@@ -35,6 +35,10 @@ export type GitCheckoutOptions = GitRunOptions & {
   create?: boolean;
 };
 
+export type GitAddOptions = GitRunOptions & {
+  paths?: string[];
+};
+
 export function runGit(args: string[], options: GitRunOptions = {}): GitResult {
   const result = spawnSync('git', args, {
     cwd: options.cwd,
@@ -62,6 +66,20 @@ export function runGit(args: string[], options: GitRunOptions = {}): GitResult {
   }
 
   return { stdout, stderr };
+}
+
+export function isGitRepo(options: GitRunOptions = {}): boolean {
+  try {
+    const result = runGit(['rev-parse', '--is-inside-work-tree'], options);
+    return result.stdout.trim() === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function getRepoRoot(options: GitRunOptions = {}): string {
+  const result = runGit(['rev-parse', '--show-toplevel'], options);
+  return result.stdout.trim();
 }
 
 export function getCurrentBranch(options: GitRunOptions = {}): string {
@@ -135,6 +153,17 @@ export function getDiff(options: GitDiffOptions = {}): string {
   return runGit(args, options).stdout;
 }
 
+export function addChanges(options: GitAddOptions = {}): void {
+  const args = ['add'];
+  if (options.paths && options.paths.length > 0) {
+    args.push('--', ...options.paths);
+  } else {
+    args.push('-A');
+  }
+
+  runGit(args, options);
+}
+
 export function commitChanges(options: GitCommitOptions): void {
   const args = ['commit', '-m', options.message];
   if (options.all) {
@@ -145,6 +174,11 @@ export function commitChanges(options: GitCommitOptions): void {
   }
 
   runGit(args, options);
+}
+
+export function getHeadCommitHash(options: GitRunOptions = {}): string {
+  const result = runGit(['rev-parse', 'HEAD'], options);
+  return result.stdout.trim();
 }
 
 export function checkoutBranch(name: string, options: GitCheckoutOptions = {}): void {
