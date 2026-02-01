@@ -52,23 +52,24 @@ export function resolveSessionPlan(intent: SessionIntent): SessionPlan {
   const sessionId = intent.sessionIdOverride ?? `${formatDate(date)}-${slug}`;
   const isAiBranch = intent.currentBranch.startsWith(AI_PREFIX);
 
-  if (isAiBranch && !intent.explore) {
+  if (intent.explore) {
+    const parentBranch = isAiBranch ? intent.currentBranch : `${AI_PREFIX}${intent.currentBranch}`;
+    return {
+      action: 'create',
+      branchName: `${parentBranch}/explore-${slug}`,
+      baseBranch,
+      sessionId,
+      reason: isAiBranch ? 'explore requested from ai/* branch' : 'explore requested from non-ai branch',
+    };
+  }
+
+  if (isAiBranch) {
     return {
       action: 'reuse',
       branchName: intent.currentBranch,
       baseBranch,
       sessionId: intent.sessionIdOverride ?? intent.currentBranch.replace(AI_PREFIX, ''),
       reason: 'already on ai/* branch',
-    };
-  }
-
-  if (isAiBranch && intent.explore) {
-    return {
-      action: 'create',
-      branchName: `${intent.currentBranch}/explore-${slug}`,
-      baseBranch,
-      sessionId,
-      reason: 'explore requested from ai/* branch',
     };
   }
 
