@@ -9,3 +9,5 @@ export {
   writeSessionsIndex,
 } from './store';
 export type { SessionRecord, SessionsIndex, SessionStatus } from './store';
+export { hashPrompt, writeTraceMarkdown, writeTraceMeta } from './traces';
+export type { TraceContent, TraceMeta } from './traces';
