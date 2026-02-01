@@ -13,8 +13,9 @@ export { hashPrompt, writeTraceMarkdown, writeTraceMeta } from './traces';
 export type { TraceContent, TraceMeta } from './traces';
 export {
   buildPrDescription,
+  extractTraceSummary,
   generatePrDescription,
   renderPrDescription,
   writePrDescription,
 } from './pr-generator';
-export type { PrBuildOptions, PrDescription, PrSection } from './pr-generator';
+export type { PrBuildOptions, PrDescription, PrSection, TraceSummary } from './pr-generator';
