@@ -1,4 +1,5 @@
-﻿export async function run(argv: string[]): Promise<void> {
-  void argv;
-  throw new Error('CLI not implemented yet.');
+﻿import { run as oclifRun } from '@oclif/core';
+
+export async function run(argv: string[]): Promise<void> {
+  await oclifRun(argv);
 }

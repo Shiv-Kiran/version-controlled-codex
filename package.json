@@ -14,8 +14,15 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@oclif/core": "^3.0.0"
+  },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "typescript": "^5.3.3"
+  },
+  "oclif": {
+    "bin": "ledger",
+    "commands": "./dist/cli/commands"
   }
 }
