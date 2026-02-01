@@ -1,4 +1,5 @@
-﻿import path from 'node:path';
+﻿import 'dotenv/config';
+import path from 'node:path';
 import { run as oclifRun } from '@oclif/core';
 
 export async function run(argv: string[]): Promise<void> {

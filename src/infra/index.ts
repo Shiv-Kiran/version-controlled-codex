@@ -21,3 +21,6 @@ export type {
   GitRunOptions,
   GitStatusSummary,
 } from './git';
+
+export { createOpenAIClient, createTextResponse } from './openai';
+export type { OpenAIConfig, OpenAIResponseText } from './openai';
