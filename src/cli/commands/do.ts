@@ -12,6 +12,13 @@ import {
 import { OpenAIBuilder, OpenAIScribe } from '../../agents';
 import { hashPrompt, upsertSession, writeTraceMarkdown, writeTraceMeta } from '../../ledger';
 
+function truncate(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength - 3)}...`;
+}
+
 export default class DoCommand extends BaseCommand {
   static summary = 'Execute an AI-assisted change.';
   static description =
@@ -91,19 +98,26 @@ export default class DoCommand extends BaseCommand {
     });
 
     if (!builderResult.didChange) {
-      logger.info('No changes produced by builder.');
-      return;
-    }
-
-    const diff = getDiff({ cwd });
-    if (!diff.trim()) {
-      logger.info('No diff detected after applying patch.');
+      logger.warn('Builder did not produce a valid patch.');
+      if (builderResult.rawOutput) {
+        logger.info(`Builder output (truncated): ${truncate(builderResult.rawOutput, 600)}`);
+      }
       return;
     }
 
     if (flags.dryRun) {
       logger.info('Dry run enabled. Skipping commit and trace write.');
       logger.info(`Builder summary: ${builderResult.summary}`);
+      if (builderResult.diff) {
+        logger.info(`Builder diff (truncated): ${truncate(builderResult.diff, 600)}`);
+      }
+      return;
+    }
+
+    addChanges({ cwd });
+    const diff = getDiff({ cwd, staged: true });
+    if (!diff.trim()) {
+      logger.info('No diff detected after staging changes.');
       return;
     }
 
@@ -124,7 +138,6 @@ export default class DoCommand extends BaseCommand {
       sessionId: plan.sessionId,
     });
 
-    addChanges({ cwd });
     commitChanges({ cwd, message: scribeResult.commitMessage });
     const commitHash = getHeadCommitHash({ cwd });
 

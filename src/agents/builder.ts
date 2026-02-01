@@ -8,6 +8,7 @@ export type BuilderOutput = {
   didChange: boolean;
   summary: string;
   diff: string;
+  rawOutput?: string;
   llm?: {
     model?: string;
     usage?: unknown;
