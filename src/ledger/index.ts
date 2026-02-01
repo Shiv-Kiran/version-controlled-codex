@@ -11,3 +11,10 @@ export {
 export type { SessionRecord, SessionsIndex, SessionStatus } from './store';
 export { hashPrompt, writeTraceMarkdown, writeTraceMeta } from './traces';
 export type { TraceContent, TraceMeta } from './traces';
+export {
+  buildPrDescription,
+  generatePrDescription,
+  renderPrDescription,
+  writePrDescription,
+} from './pr-generator';
+export type { PrBuildOptions, PrDescription, PrSection } from './pr-generator';
