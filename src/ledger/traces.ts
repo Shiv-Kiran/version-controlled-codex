@@ -6,6 +6,13 @@ import {
   resolveTraceMetaPath,
 } from './paths';
 
+export type LlmMetadata = {
+  model?: string;
+  usage?: unknown;
+  requestId?: string;
+  reasoningEffort?: string;
+};
+
 export type TraceMeta = {
   commitHash: string;
   sessionId: string;
@@ -13,6 +20,7 @@ export type TraceMeta = {
   chatRefHash?: string;
   model?: string;
   tokens?: number;
+  llm?: LlmMetadata;
   createdAt: string;
 };
 

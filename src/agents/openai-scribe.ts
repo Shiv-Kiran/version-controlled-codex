@@ -79,6 +79,7 @@ export class OpenAIScribe implements Scribe {
         model: response.model,
         usage: response.usage,
         requestId: response.requestId,
+        reasoningEffort: (response as { reasoning?: { effort?: string } })?.reasoning?.effort,
       },
     };
   }

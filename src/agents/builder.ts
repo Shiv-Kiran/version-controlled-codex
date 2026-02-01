@@ -12,6 +12,7 @@ export type BuilderOutput = {
     model?: string;
     usage?: unknown;
     requestId?: string;
+    reasoningEffort?: string;
   };
 };
 

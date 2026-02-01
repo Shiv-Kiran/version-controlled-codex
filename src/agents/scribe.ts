@@ -11,6 +11,7 @@ export type ScribeOutput = {
     model?: string;
     usage?: unknown;
     requestId?: string;
+    reasoningEffort?: string;
   };
 };
 
