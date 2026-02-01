@@ -8,7 +8,7 @@
     "node": ">=18"
   },
   "bin": {
-    "ledger": "dist/cli/index.js"
+    "ledger": "bin/ledger"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
