@@ -2,6 +2,12 @@
 
 export default class Explore extends Command {
   static summary = 'Start an exploratory session or run an exploratory prompt.';
+  static description =
+    'Creates an ephemeral explore branch or runs a prompt in explore mode.';
+  static examples = [
+    '<%= config.bin %> explore',
+    '<%= config.bin %> explore "try rewriting this in Rust"',
+  ];
 
   static args = {
     prompt: Args.string({
