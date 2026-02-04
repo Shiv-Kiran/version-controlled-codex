@@ -184,6 +184,15 @@ export function getCommitDiffStat(
   return result.stdout.trim();
 }
 
+export function getCommitDiff(
+  fromCommit: string,
+  toCommit: string,
+  options: GitRunOptions = {}
+): string {
+  const result = runGit(['diff', '--no-color', `${fromCommit}..${toCommit}`], options);
+  return result.stdout;
+}
+
 export function updateRef(refName: string, commitHash: string, options: GitRunOptions = {}): void {
   runGit(['update-ref', refName, commitHash], options);
 }

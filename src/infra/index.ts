@@ -4,6 +4,7 @@
   checkoutBranch,
   commitChanges,
   createBranch,
+  getCommitDiff,
   getCommitDiffStat,
   getCommitMessage,
   getCurrentBranch,
