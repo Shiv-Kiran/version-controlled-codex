@@ -1,4 +1,10 @@
-﻿import { ensureLedgerStore, writeTraceMarkdown, writeTraceMeta } from '../ledger';
+import {
+  consumePendingAnnotation,
+  ensureLedgerStore,
+  readPendingAnnotation,
+  writeTraceMarkdown,
+  writeTraceMeta,
+} from '../ledger';
 import { hashPrompt } from '../ledger';
 import {
   createOpenAIClient,
@@ -62,6 +68,7 @@ async function summarizeWithLlm(input: {
   commitSubject?: string;
   diffStat?: string;
   changedFiles?: string[];
+  annotationPrompt?: string;
 }): Promise<LlmSummary | null> {
   const client = createOpenAIClient({
     apiKey: input.apiKey,
@@ -81,6 +88,9 @@ async function summarizeWithLlm(input: {
   const payload = [
     'Commit subject:',
     input.commitSubject ?? 'None',
+    '',
+    'Prompt attribution:',
+    input.annotationPrompt ?? 'None',
     '',
     'Commit message:',
     input.prompt,
@@ -124,6 +134,8 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
   const diffStat = getCommitDiffStat(`${commitHash}~1`, commitHash, { cwd });
   const diff = truncate(getCommitDiff(`${commitHash}~1`, commitHash, { cwd }), MAX_DIFF_CHARS);
   const summary = buildSummary(commitMessage, diffStat);
+  const pendingAnnotation = readPendingAnnotation(cwd);
+  const annotationPrompt = pendingAnnotation?.prompt;
 
   const useLlm = process.env.CODEX_LEDGER_USE_LLM_SUMMARY === '1';
   const llmModel = process.env.OPENAI_MODEL ?? 'gpt-4.1-mini';
@@ -145,6 +157,7 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
         commitSubject,
         diffStat,
         changedFiles,
+        annotationPrompt,
       });
       if (llmSummary?.rationale) {
         reasoning = llmSummary.rationale;
@@ -156,6 +169,16 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
 
   const promptHash = hashPrompt(commitMessage);
   const chatRefHash = extraContext ? hashPrompt(extraContext) : undefined;
+  const annotation = pendingAnnotation
+    ? {
+        id: pendingAnnotation.id,
+        prompt: pendingAnnotation.prompt,
+        promptHash: pendingAnnotation.promptHash,
+        model: pendingAnnotation.model,
+        sessionId: pendingAnnotation.sessionId,
+        createdAt: pendingAnnotation.createdAt,
+      }
+    : undefined;
   writeTraceMarkdown(
     commitHash,
     {
@@ -173,10 +196,15 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
       sessionId: `${currentBranch}-human`,
       promptHash,
       chatRefHash,
+      annotation,
       createdAt: new Date().toISOString(),
     },
     cwd
   );
+
+  if (pendingAnnotation) {
+    consumePendingAnnotation(commitHash, cwd);
+  }
 
   const mirrorBranch = `${AI_PREFIX}${currentBranch}`;
   updateRef(`refs/heads/${mirrorBranch}`, commitHash, { cwd });

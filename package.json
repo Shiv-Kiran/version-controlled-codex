@@ -3,14 +3,21 @@
   "version": "0.1.0",
   "description": "CLI for ledgering AI-assisted code changes.",
   "license": "MIT",
-  "private": true,
+  "private": false,
   "engines": {
     "node": ">=18"
   },
   "bin": {
     "ledger": "bin/ledger"
   },
-  "files": ["dist", "bin", "README.md", "LICENSE", "package.json", ".env.example"],
+  "files": [
+    "dist/**/*",
+    "bin/*",
+    "README.md",
+    "LICENSE",
+    "package.json",
+    ".env.example"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

@@ -20,11 +20,21 @@ export type TraceMeta = {
   sessionId: string;
   promptHash?: string;
   chatRefHash?: string;
+  annotation?: AnnotationMeta;
   model?: string;
   tokens?: number;
   llm?: LlmMetadata;
   builderLlm?: LlmMetadata;
   scribeLlm?: LlmMetadata;
+  createdAt: string;
+};
+
+export type AnnotationMeta = {
+  id: string;
+  prompt: string;
+  promptHash: string;
+  model?: string;
+  sessionId?: string;
   createdAt: string;
 };
 

@@ -4,14 +4,21 @@ export type LedgerPaths = {
   root: string;
   sessionsFile: string;
   tracesDir: string;
+  annotationsDir: string;
+  annotationsConsumedDir: string;
+  annotationsPendingFile: string;
 };
 
 export function resolveLedgerPaths(cwd: string = process.cwd()): LedgerPaths {
   const root = path.join(cwd, '.codex-ledger');
+  const annotationsDir = path.join(root, 'annotations');
   return {
     root,
     sessionsFile: path.join(root, 'sessions.json'),
     tracesDir: path.join(root, 'traces'),
+    annotationsDir,
+    annotationsConsumedDir: path.join(annotationsDir, 'consumed'),
+    annotationsPendingFile: path.join(annotationsDir, 'pending.json'),
   };
 }
 
@@ -23,4 +30,14 @@ export function resolveTraceMarkdownPath(commitHash: string, cwd?: string): stri
 export function resolveTraceMetaPath(commitHash: string, cwd?: string): string {
   const { tracesDir } = resolveLedgerPaths(cwd);
   return path.join(tracesDir, `${commitHash}.json`);
+}
+
+export function resolveAnnotationPendingPath(cwd?: string): string {
+  const { annotationsPendingFile } = resolveLedgerPaths(cwd);
+  return annotationsPendingFile;
+}
+
+export function resolveAnnotationConsumedPath(commitHash: string, cwd?: string): string {
+  const { annotationsConsumedDir } = resolveLedgerPaths(cwd);
+  return path.join(annotationsConsumedDir, `${commitHash}.json`);
 }
