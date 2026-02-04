@@ -8,6 +8,9 @@ import {
   getCurrentBranch,
   getDiff,
   getHeadCommitHash,
+  getStatusSummary,
+  stashPop,
+  stashPush,
 } from '../../infra';
 import { OpenAIBuilder, OpenAIScribe } from '../../agents';
 import { hashPrompt, upsertSession, writeTraceMarkdown, writeTraceMeta } from '../../ledger';
@@ -53,6 +56,11 @@ export default class DoCommand extends BaseCommand {
       default: false,
       description: 'Compute changes without modifying files',
     }),
+    dirty: Flags.string({
+      description: 'Dirty tree policy (abort|stash|continue)',
+      options: ['abort', 'stash', 'continue'],
+      default: 'abort',
+    }),
   };
 
   async run(): Promise<void> {
@@ -61,7 +69,23 @@ export default class DoCommand extends BaseCommand {
     const cwd = process.cwd();
 
     ensureGitRepo({ cwd });
-    ensureCleanWorkingTree({ cwd });
+    const status = getStatusSummary({ cwd });
+    let didStash = false;
+    if (status.isDirty) {
+      if (flags.dirty === 'abort') {
+        ensureCleanWorkingTree({ cwd });
+      } else if (flags.dirty === 'stash') {
+        stashPush({
+          cwd,
+          includeUntracked: true,
+          message: `codex-ledger stash (${new Date().toISOString()})`,
+        });
+        didStash = true;
+        logger.info('Stashed local changes before running session.');
+      } else {
+        logger.warn('Proceeding with dirty working tree.');
+      }
+    }
 
     const currentBranch = getCurrentBranch({ cwd });
     const plan = resolveSessionPlan({
@@ -71,114 +95,129 @@ export default class DoCommand extends BaseCommand {
       sessionIdOverride: flags.session,
     });
 
-    if (plan.action === 'create') {
-      if (plan.baseBranch !== currentBranch) {
-        checkoutBranch(plan.baseBranch, { cwd });
+    try {
+      if (plan.action === 'create') {
+        if (plan.baseBranch !== currentBranch) {
+          checkoutBranch(plan.baseBranch, { cwd });
+        }
+        checkoutBranch(plan.branchName, { cwd, create: true });
+        logger.info(`Created session branch ${plan.branchName}`);
       }
-      checkoutBranch(plan.branchName, { cwd, create: true });
-      logger.info(`Created session branch ${plan.branchName}`);
-    }
 
-    const builder = new OpenAIBuilder({
-      client: {
-        apiKey: config.openai?.apiKey,
-        baseUrl: config.openai?.baseUrl,
-        organization: config.openai?.organization,
-        project: config.openai?.project,
+      const builder = new OpenAIBuilder({
+        client: {
+          apiKey: config.openai?.apiKey,
+          baseUrl: config.openai?.baseUrl,
+          organization: config.openai?.organization,
+          project: config.openai?.project,
+          model: config.openai?.model,
+        },
         model: config.openai?.model,
-      },
-      model: config.openai?.model,
-      applyPatch: !flags.dryRun,
-    });
+        applyPatch: !flags.dryRun,
+      });
 
-    const builderResult = await builder.build({
-      prompt: args.prompt,
-      cwd,
-      sessionId: plan.sessionId,
-    });
+      const builderResult = await builder.build({
+        prompt: args.prompt,
+        cwd,
+        sessionId: plan.sessionId,
+      });
 
-    if (!builderResult.didChange) {
-      logger.warn('Builder did not produce a valid patch.');
-      if (builderResult.rawOutput) {
-        logger.info(`Builder output (truncated): ${truncate(builderResult.rawOutput, 600)}`);
+      if (!builderResult.didChange) {
+        logger.warn('Builder did not produce a valid patch.');
+        if (builderResult.rawOutput) {
+          logger.info(`Builder output (truncated): ${truncate(builderResult.rawOutput, 600)}`);
+        }
+        return;
       }
-      return;
-    }
 
-    if (flags.dryRun) {
-      logger.info('Dry run enabled. Skipping commit and trace write.');
-      logger.info(`Builder summary: ${builderResult.summary}`);
-      if (builderResult.diff) {
-        logger.info(`Builder diff (truncated): ${truncate(builderResult.diff, 600)}`);
+      if (flags.dryRun) {
+        logger.info('Dry run enabled. Skipping commit and trace write.');
+        logger.info(`Builder summary: ${builderResult.summary}`);
+        if (builderResult.diff) {
+          logger.info(`Builder diff (truncated): ${truncate(builderResult.diff, 600)}`);
+        }
+        return;
       }
-      return;
-    }
 
-    addChanges({ cwd });
-    const diff = getDiff({ cwd, staged: true });
-    if (!diff.trim()) {
-      logger.info('No diff detected after staging changes.');
-      return;
-    }
+      addChanges({ cwd });
+      const diff = getDiff({ cwd, staged: true });
+      if (!diff.trim()) {
+        logger.info('No diff detected after staging changes.');
+        return;
+      }
 
-    const scribe = new OpenAIScribe({
-      client: {
-        apiKey: config.openai?.apiKey,
-        baseUrl: config.openai?.baseUrl,
-        organization: config.openai?.organization,
-        project: config.openai?.project,
+      const scribe = new OpenAIScribe({
+        client: {
+          apiKey: config.openai?.apiKey,
+          baseUrl: config.openai?.baseUrl,
+          organization: config.openai?.organization,
+          project: config.openai?.project,
+          model: config.openai?.model,
+        },
         model: config.openai?.model,
-      },
-      model: config.openai?.model,
-    });
+      });
 
-    const scribeResult = await scribe.describe({
-      prompt: args.prompt,
-      diff,
-      sessionId: plan.sessionId,
-    });
+      const scribeResult = await scribe.describe({
+        prompt: args.prompt,
+        diff,
+        sessionId: plan.sessionId,
+      });
 
-    commitChanges({ cwd, message: scribeResult.commitMessage });
-    const commitHash = getHeadCommitHash({ cwd });
+      commitChanges({ cwd, message: scribeResult.commitMessage });
+      const commitHash = getHeadCommitHash({ cwd });
 
-    const promptHash = hashPrompt(args.prompt);
-    writeTraceMarkdown(
-      commitHash,
-      {
-        summary: builderResult.summary,
-        risk: 'Low',
-        details: scribeResult.reasoning,
-      },
-      cwd
-    );
-    writeTraceMeta(
-      {
+      const promptHash = hashPrompt(args.prompt);
+      writeTraceMarkdown(
         commitHash,
-        sessionId: plan.sessionId,
-        promptHash,
-        createdAt: new Date().toISOString(),
-        model: scribeResult.llm?.model ?? builderResult.llm?.model,
-        llm: scribeResult.llm ?? builderResult.llm,
-        builderLlm: builderResult.llm,
-        scribeLlm: scribeResult.llm,
-      },
-      cwd
-    );
+        {
+          summary: builderResult.summary,
+          risk: 'Low',
+          details: scribeResult.reasoning,
+        },
+        cwd
+      );
+      writeTraceMeta(
+        {
+          commitHash,
+          sessionId: plan.sessionId,
+          promptHash,
+          createdAt: new Date().toISOString(),
+          model: scribeResult.llm?.model ?? builderResult.llm?.model,
+          llm: scribeResult.llm ?? builderResult.llm,
+          builderLlm: builderResult.llm,
+          scribeLlm: scribeResult.llm,
+        },
+        cwd
+      );
 
-    upsertSession(
-      {
-        sessionId: plan.sessionId,
-        branch: plan.branchName,
-        startedAt: new Date().toISOString(),
-        lastPromptSummary: builderResult.summary,
-        status: 'active',
-      },
-      cwd
-    );
+      upsertSession(
+        {
+          sessionId: plan.sessionId,
+          branch: plan.branchName,
+          startedAt: new Date().toISOString(),
+          lastPromptSummary: builderResult.summary,
+          status: 'active',
+        },
+        cwd
+      );
 
-    logger.info(`Committed to ${plan.branchName} as ${commitHash}: ${scribeResult.commitMessage}`);
-    if (flags.confirm) {
-      logger.info('Confirm flag is currently informational only.');
+      logger.info(`Committed to ${plan.branchName} as ${commitHash}: ${scribeResult.commitMessage}`);
+      if (flags.confirm) {
+        logger.info('Confirm flag is currently informational only.');
+      }
+    } finally {
+      if (getCurrentBranch({ cwd }) !== currentBranch) {
+        checkoutBranch(currentBranch, { cwd });
+        logger.info(`Checked out back to ${currentBranch}`);
+      }
+      if (didStash) {
+        try {
+          stashPop({ cwd });
+          logger.info('Restored stashed changes.');
+        } catch {
+          logger.warn('Failed to re-apply stashed changes automatically.');
+        }
+      }
     }
   }
 }

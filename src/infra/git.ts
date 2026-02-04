@@ -36,6 +36,11 @@ export type GitCheckoutOptions = GitRunOptions & {
   create?: boolean;
 };
 
+export type GitStashOptions = GitRunOptions & {
+  includeUntracked?: boolean;
+  message?: string;
+};
+
 export type GitAddOptions = GitRunOptions & {
   paths?: string[];
 };
@@ -241,4 +246,19 @@ export function checkoutBranch(name: string, options: GitCheckoutOptions = {}): 
 
 export function createBranch(name: string, options: GitRunOptions = {}): void {
   runGit(['branch', name], options);
+}
+
+export function stashPush(options: GitStashOptions = {}): string {
+  const args = ['stash', 'push'];
+  if (options.includeUntracked) {
+    args.push('-u');
+  }
+  if (options.message) {
+    args.push('-m', options.message);
+  }
+  return runGit(args, options).stdout.trim();
+}
+
+export function stashPop(options: GitRunOptions = {}): string {
+  return runGit(['stash', 'pop'], options).stdout.trim();
 }

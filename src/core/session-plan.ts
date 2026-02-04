@@ -59,7 +59,9 @@ export function resolveSessionPlan(intent: SessionIntent): SessionPlan {
   const isAiBranch = intent.currentBranch.startsWith(AI_PREFIX);
 
   if (intent.explore) {
-    const parentBranch = isAiBranch ? intent.currentBranch : `${AI_PREFIX}${intent.currentBranch}`;
+    const parentBranch = isAiBranch
+      ? intent.currentBranch
+      : `${AI_PREFIX}${baseBranch}`;
     return {
       action: 'create',
       branchName: `${parentBranch}/explore-${sessionId}`,
@@ -81,7 +83,7 @@ export function resolveSessionPlan(intent: SessionIntent): SessionPlan {
 
   return {
     action: 'create',
-    branchName: `${AI_PREFIX}${sessionId}`,
+    branchName: `${AI_PREFIX}${baseBranch}/${sessionId}`,
     baseBranch,
     sessionId,
     reason: 'new ai/* branch from non-ai base',

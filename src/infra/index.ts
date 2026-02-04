@@ -16,6 +16,8 @@
   getStatusSummary,
   isGitRepo,
   runGit,
+  stashPop,
+  stashPush,
   updateRef,
 } from './git';
 
@@ -27,6 +29,7 @@ export type {
   GitResult,
   GitRunOptions,
   GitStatusSummary,
+  GitStashOptions,
 } from './git';
 
 export { createOpenAIClient, createTextResponse } from './openai';
