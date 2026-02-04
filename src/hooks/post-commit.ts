@@ -137,7 +137,7 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
   const pendingAnnotation = readPendingAnnotation(cwd);
   const annotationPrompt = pendingAnnotation?.prompt;
 
-  const useLlm = process.env.CODEX_LEDGER_USE_LLM_SUMMARY === '1';
+  const useLlm = process.env.CODEX_LEDGER_USE_LLM_SUMMARY !== '0';
   const llmModel = process.env.OPENAI_MODEL ?? 'gpt-4.1-mini';
   const apiKey = process.env.OPENAI_API_KEY;
   const extraContext = process.env.CODEX_LEDGER_EXTRA_CONTEXT;

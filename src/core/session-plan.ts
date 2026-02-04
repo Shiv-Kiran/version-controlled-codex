@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 export type SessionIntent = {
   task: string;
   explore?: boolean;
@@ -34,6 +36,11 @@ export function slugifyTask(task: string): string {
     .slice(0, 48);
 }
 
+function createSessionId(date: Date): string {
+  const suffix = crypto.randomBytes(4).toString('hex');
+  return `${formatDate(date)}-${suffix}`;
+}
+
 export function resolveSessionPlan(intent: SessionIntent): SessionPlan {
   const date = intent.date ?? new Date();
   const baseBranch = intent.baseBranch ?? intent.currentBranch;
@@ -48,15 +55,14 @@ export function resolveSessionPlan(intent: SessionIntent): SessionPlan {
     };
   }
 
-  const slug = slugifyTask(intent.task);
-  const sessionId = intent.sessionIdOverride ?? `${formatDate(date)}-${slug}`;
+  const sessionId = intent.sessionIdOverride ?? createSessionId(date);
   const isAiBranch = intent.currentBranch.startsWith(AI_PREFIX);
 
   if (intent.explore) {
     const parentBranch = isAiBranch ? intent.currentBranch : `${AI_PREFIX}${intent.currentBranch}`;
     return {
       action: 'create',
-      branchName: `${parentBranch}/explore-${slug}`,
+      branchName: `${parentBranch}/explore-${sessionId}`,
       baseBranch,
       sessionId,
       reason: isAiBranch ? 'explore requested from ai/* branch' : 'explore requested from non-ai branch',
