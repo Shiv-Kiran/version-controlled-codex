@@ -4,6 +4,8 @@
   checkoutBranch,
   commitChanges,
   createBranch,
+  getCommitDiffStat,
+  getCommitMessage,
   getCurrentBranch,
   getDiff,
   getHeadCommitHash,
@@ -11,6 +13,7 @@
   getStatusSummary,
   isGitRepo,
   runGit,
+  updateRef,
 } from './git';
 
 export type {

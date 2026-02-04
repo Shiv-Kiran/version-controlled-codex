@@ -99,6 +99,11 @@ export function getCurrentBranch(options: GitRunOptions = {}): string {
   return result.stdout.trim();
 }
 
+export function getHeadCommitHash(options: GitRunOptions = {}): string {
+  const result = runGit(['rev-parse', 'HEAD'], options);
+  return result.stdout.trim();
+}
+
 export function getStatusSummary(options: GitRunOptions = {}): GitStatusSummary {
   const result = runGit(['status', '--porcelain=2', '-b'], options);
   const raw = result.stdout;
@@ -165,6 +170,24 @@ export function getDiff(options: GitDiffOptions = {}): string {
   return runGit(args, options).stdout;
 }
 
+export function getCommitMessage(commitHash: string, options: GitRunOptions = {}): string {
+  const result = runGit(['log', '-1', '--pretty=%B', commitHash], options);
+  return result.stdout.trim();
+}
+
+export function getCommitDiffStat(
+  fromCommit: string,
+  toCommit: string,
+  options: GitRunOptions = {}
+): string {
+  const result = runGit(['diff', '--stat', `${fromCommit}..${toCommit}`], options);
+  return result.stdout.trim();
+}
+
+export function updateRef(refName: string, commitHash: string, options: GitRunOptions = {}): void {
+  runGit(['update-ref', refName, commitHash], options);
+}
+
 export function addChanges(options: GitAddOptions = {}): void {
   const args = ['add'];
   if (options.paths && options.paths.length > 0) {
@@ -186,11 +209,6 @@ export function commitChanges(options: GitCommitOptions): void {
   }
 
   runGit(args, options);
-}
-
-export function getHeadCommitHash(options: GitRunOptions = {}): string {
-  const result = runGit(['rev-parse', 'HEAD'], options);
-  return result.stdout.trim();
 }
 
 export function checkoutBranch(name: string, options: GitCheckoutOptions = {}): void {

@@ -55,6 +55,11 @@ function looksLikePatch(diff: string): boolean {
   );
 }
 
+function patchHasAdditions(diff: string): boolean {
+  const lines = diff.split('\n');
+  return lines.some((line) => line.startsWith('+') && !line.startsWith('+++'));
+}
+
 export class OpenAIBuilder implements Builder {
   private readonly options: OpenAIBuilderOptions;
 
@@ -65,16 +70,21 @@ export class OpenAIBuilder implements Builder {
   async build(input: BuilderInput): Promise<BuilderOutput> {
     const client = createOpenAIClient(this.options.client);
     const model = this.options.model ?? this.options.client.model ?? 'gpt-4.1-mini';
-    const maxRetries = this.options.maxRetries ?? 1;
+    const maxRetries = this.options.maxRetries ?? 2;
     const apply = this.options.applyPatch ?? true;
     let lastResponse: OpenAIResponseText | null = null;
     let lastOutput = '';
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      const retryHint =
+        attempt > 0
+          ? '\nRETRY: The previous response was invalid. The diff MUST include added content lines.'
+          : '';
+      const instructions = `${this.options.instructions ?? DEFAULT_INSTRUCTIONS}${retryHint}`;
       const response = await createTextResponse(client, {
         model,
         input: input.prompt,
-        instructions: this.options.instructions ?? DEFAULT_INSTRUCTIONS,
+        instructions,
       });
       lastResponse = response;
       lastOutput = response.outputText;
@@ -90,8 +100,9 @@ export class OpenAIBuilder implements Builder {
       const summary = parsed?.summary ?? 'LLM builder response';
       const diff = parsed?.diff ?? response.outputText;
       const isPatch = looksLikePatch(diff);
+      const hasAdditions = patchHasAdditions(diff);
 
-      if (apply && isPatch) {
+      if (apply && isPatch && hasAdditions) {
         applyPatch(diff, { cwd: input.cwd });
         return {
           didChange: true,
@@ -108,7 +119,7 @@ export class OpenAIBuilder implements Builder {
         };
       }
 
-      if (!isPatch && attempt < maxRetries) {
+      if ((!isPatch || !hasAdditions) && attempt < maxRetries) {
         continue;
       }
 
