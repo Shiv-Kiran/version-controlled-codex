@@ -1,11 +1,13 @@
-import { ensureLedgerStore, writeTraceMarkdown, writeTraceMeta } from '../ledger';
+﻿import { ensureLedgerStore, writeTraceMarkdown, writeTraceMeta } from '../ledger';
 import { hashPrompt } from '../ledger';
 import {
   createOpenAIClient,
   createTextResponse,
   getCommitDiff,
   getCommitDiffStat,
+  getCommitFiles,
   getCommitMessage,
+  getCommitSubject,
   getCurrentBranch,
   getHeadCommitHash,
   getRepoRoot,
@@ -57,6 +59,9 @@ async function summarizeWithLlm(input: {
   organization?: string;
   project?: string;
   extraContext?: string;
+  commitSubject?: string;
+  diffStat?: string;
+  changedFiles?: string[];
 }): Promise<LlmSummary | null> {
   const client = createOpenAIClient({
     apiKey: input.apiKey,
@@ -67,15 +72,26 @@ async function summarizeWithLlm(input: {
 
   const instructions = [
     'You are a senior developer reviewing a human commit.',
-    'Summarize the intent and rationale using the diff.',
+    'Summarize the intent and rationale using the diff and context.',
     'Return strict JSON with keys: summary, rationale, reviewer_notes.',
     'summary: 1 short sentence. rationale: 2-4 sentences. reviewer_notes: optional bullet list.',
     'Do not wrap JSON in markdown or code fences.',
   ].join('\n');
 
   const payload = [
+    'Commit subject:',
+    input.commitSubject ?? 'None',
+    '',
     'Commit message:',
     input.prompt,
+    '',
+    'Changed files:',
+    input.changedFiles && input.changedFiles.length
+      ? input.changedFiles.map((file) => `- ${file}`).join('\n')
+      : 'None',
+    '',
+    'Diff stat:',
+    input.diffStat || 'None',
     '',
     'Diff:',
     input.diff,
@@ -103,6 +119,8 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
 
   const commitHash = getHeadCommitHash({ cwd });
   const commitMessage = getCommitMessage(commitHash, { cwd });
+  const commitSubject = getCommitSubject(commitHash, { cwd });
+  const changedFiles = getCommitFiles(commitHash, { cwd });
   const diffStat = getCommitDiffStat(`${commitHash}~1`, commitHash, { cwd });
   const diff = truncate(getCommitDiff(`${commitHash}~1`, commitHash, { cwd }), MAX_DIFF_CHARS);
   const summary = buildSummary(commitMessage, diffStat);
@@ -124,6 +142,9 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
         organization: process.env.OPENAI_ORGANIZATION,
         project: process.env.OPENAI_PROJECT,
         extraContext,
+        commitSubject,
+        diffStat,
+        changedFiles,
       });
       if (llmSummary?.rationale) {
         reasoning = llmSummary.rationale;

@@ -175,6 +175,16 @@ export function getCommitMessage(commitHash: string, options: GitRunOptions = {}
   return result.stdout.trim();
 }
 
+export function getCommitSubject(commitHash: string, options: GitRunOptions = {}): string {
+  const result = runGit(['log', '-1', '--pretty=%s', commitHash], options);
+  return result.stdout.trim();
+}
+
+export function getCommitFiles(commitHash: string, options: GitRunOptions = {}): string[] {
+  const result = runGit(['diff-tree', '--no-commit-id', '--name-only', '-r', commitHash], options);
+  return result.stdout.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
 export function getCommitDiffStat(
   fromCommit: string,
   toCommit: string,
