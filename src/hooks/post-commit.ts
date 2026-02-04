@@ -50,6 +50,8 @@ export function runPostCommit(options: HookOptions = {}): void {
   writeTraceMeta(
     {
       commitHash,
+      sourceCommit: commitHash,
+      sourceBranch: currentBranch,
       sessionId: `${currentBranch}-human`,
       promptHash,
       createdAt: new Date().toISOString(),

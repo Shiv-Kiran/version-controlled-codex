@@ -15,6 +15,8 @@ export type LlmMetadata = {
 
 export type TraceMeta = {
   commitHash: string;
+  sourceCommit?: string;
+  sourceBranch?: string;
   sessionId: string;
   promptHash?: string;
   chatRefHash?: string;
