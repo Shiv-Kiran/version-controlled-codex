@@ -22,6 +22,14 @@ export type ConsumedAnnotationRecord = AnnotationRecord & {
   consumedAt: string;
 };
 
+export type PendingAnnotationInput = Omit<
+  AnnotationRecord,
+  'id' | 'promptHash' | 'createdAt' | 'source'
+> & {
+  id?: string;
+  createdAt?: string;
+};
+
 function ensureAnnotationDirs(cwd?: string): void {
   const { annotationsDir, annotationsConsumedDir } = resolveLedgerPaths(cwd);
   fs.mkdirSync(annotationsDir, { recursive: true });
@@ -33,10 +41,7 @@ export function createAnnotationId(): string {
 }
 
 export function writePendingAnnotation(
-  record: Omit<AnnotationRecord, 'id' | 'promptHash' | 'createdAt'> & {
-    id?: string;
-    createdAt?: string;
-  },
+  record: PendingAnnotationInput,
   cwd?: string
 ): AnnotationRecord {
   ensureAnnotationDirs(cwd);
