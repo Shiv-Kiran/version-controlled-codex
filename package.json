@@ -1,6 +1,6 @@
 {
   "name": "codex-ledger",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI for ledgering AI-assisted code changes.",
   "license": "MIT",
   "private": false,

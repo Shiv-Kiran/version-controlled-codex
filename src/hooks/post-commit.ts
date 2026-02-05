@@ -7,6 +7,9 @@ import {
 } from '../ledger';
 import { hashPrompt } from '../ledger';
 import {
+  addChanges,
+  checkoutBranch,
+  commitChanges,
   createOpenAIClient,
   createTextResponse,
   getCommitDiff,
@@ -15,6 +18,7 @@ import {
   getCommitMessage,
   getCommitSubject,
   getCurrentBranch,
+  getDiff,
   getHeadCommitHash,
   getRepoRoot,
   updateRef,
@@ -26,6 +30,7 @@ type HookOptions = {
 
 const AI_PREFIX = 'ai/';
 const MAX_DIFF_CHARS = 8000;
+const LEDGER_COMMIT_PREFIX = 'chore(ledger): capture trace for';
 
 function buildSummary(message: string, diffStat: string): string {
   const trimmed = message.split('\n').find((line) => line.trim().length > 0) ?? 'Human commit';
@@ -122,8 +127,8 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
   const cwd = options.cwd ?? process.cwd();
   ensureLedgerStore(cwd);
 
-  const currentBranch = getCurrentBranch({ cwd });
-  if (currentBranch.startsWith(AI_PREFIX)) {
+  const humanBranch = getCurrentBranch({ cwd });
+  if (humanBranch.startsWith(AI_PREFIX)) {
     return;
   }
 
@@ -142,7 +147,7 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
   const extraContext = process.env.CODEX_LEDGER_EXTRA_CONTEXT;
 
-  let reasoning = `Human commit mirrored from branch ${currentBranch}.`;
+  let reasoning = `Human commit mirrored from branch ${humanBranch}.`;
   if (useLlm && apiKey) {
     try {
       const llmSummary = await summarizeWithLlm({
@@ -179,35 +184,53 @@ export async function runPostCommit(options: HookOptions = {}): Promise<void> {
         createdAt: pendingAnnotation.createdAt,
       }
     : undefined;
-  writeTraceMarkdown(
-    commitHash,
-    {
-      summary,
-      risk: 'Low',
-      details: reasoning,
-    },
-    cwd
-  );
-  writeTraceMeta(
-    {
+  const mirrorBranch = `${AI_PREFIX}${humanBranch}`;
+  const mirrorRef = `refs/heads/${mirrorBranch}`;
+  updateRef(mirrorRef, commitHash, { cwd });
+
+  try {
+    checkoutBranch(mirrorBranch, { cwd });
+    writeTraceMarkdown(
       commitHash,
-      sourceCommit: commitHash,
-      sourceBranch: currentBranch,
-      sessionId: `${currentBranch}-human`,
-      promptHash,
-      chatRefHash,
-      annotation,
-      createdAt: new Date().toISOString(),
-    },
-    cwd
-  );
+      {
+        summary,
+        risk: 'Low',
+        details: reasoning,
+      },
+      cwd
+    );
+    writeTraceMeta(
+      {
+        commitHash,
+        sourceCommit: commitHash,
+        sourceBranch: humanBranch,
+        sessionId: `${humanBranch}-human`,
+        promptHash,
+        chatRefHash,
+        annotation,
+        createdAt: new Date().toISOString(),
+      },
+      cwd
+    );
 
-  if (pendingAnnotation) {
-    consumePendingAnnotation(commitHash, cwd);
+    if (pendingAnnotation) {
+      consumePendingAnnotation(commitHash, cwd);
+    }
+
+    addChanges({ cwd, paths: ['.codex-ledger'] });
+    const stagedDiff = getDiff({ cwd, staged: true, paths: ['.codex-ledger'] });
+    if (stagedDiff.trim()) {
+      const shortHash = commitHash.slice(0, 7);
+      commitChanges({
+        cwd,
+        message: `${LEDGER_COMMIT_PREFIX} ${shortHash}\n\nsource-branch: ${humanBranch}\nsource-commit: ${commitHash}`,
+      });
+    }
+  } finally {
+    if (getCurrentBranch({ cwd }) !== humanBranch) {
+      checkoutBranch(humanBranch, { cwd });
+    }
   }
-
-  const mirrorBranch = `${AI_PREFIX}${currentBranch}`;
-  updateRef(`refs/heads/${mirrorBranch}`, commitHash, { cwd });
 }
 
 if (require.main === module) {
