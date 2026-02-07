@@ -1,5 +1,6 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
+import type { TrackingPolicy } from '../core/tracking-policy';
 import type { LogFormat, LogLevel } from '../shared/logger';
 
 export type LedgerConfig = {
@@ -17,6 +18,7 @@ export type LedgerConfig = {
   session?: {
     baseBranch?: string;
     branchPrefix?: string;
+    trackingPolicy?: TrackingPolicy;
   };
 };
 
@@ -93,6 +95,7 @@ export function loadConfig(options: LoadConfigOptions = {}): {
     session: {
       baseBranch: env.CODEX_LEDGER_BASE_BRANCH,
       branchPrefix: env.CODEX_LEDGER_BRANCH_PREFIX,
+      trackingPolicy: env.CODEX_LEDGER_TRACKING_POLICY as TrackingPolicy | undefined,
     },
   };
 
@@ -115,7 +118,8 @@ export function loadConfig(options: LoadConfigOptions = {}): {
           env.CODEX_LEDGER_LOG_LEVEL ||
           env.CODEX_LEDGER_LOG_FORMAT ||
           env.CODEX_LEDGER_BASE_BRANCH ||
-          env.CODEX_LEDGER_BRANCH_PREFIX
+          env.CODEX_LEDGER_BRANCH_PREFIX ||
+          env.CODEX_LEDGER_TRACKING_POLICY
       ),
     },
   };
