@@ -1,56 +1,48 @@
 # Codex-Ledger
 
-Codex-Ledger keeps a Git-native audit trail of AI-assisted changes. It mirrors commits into dedicated ai/* branches, writes trace files, and can summarize diffs with an LLM so reviewers can understand what happened and why.
+Codex-Ledger is a Git-native audit layer for AI-assisted development.  
+It mirrors work into `ai/*` branches and stores summaries in `.codex-ledger/`.
 
-## Requirements
-- Node.js 18+
-- Git 2.30+
-- OpenAI API key for LLM summaries (optional but recommended)
+## Install
+Requirements: Node.js 18+, Git 2.30+.
 
-## Install (local dev)
+From npm:
 ```bash
-npm install
-npm run build
-npm pack
+npm i -g codex-ledger
+ledger --help
 ```
-Then test in another repo:
+
+Or without global install:
 ```bash
-npx ..\version-controlled-codex\codex-ledger-0.1.1.tgz --help
+npx codex-ledger --help
 ```
 
 ## Config
-Create a `.env` in the repo you want to run the tool on:
-```
+In your target repo, create `.env`:
+```bash
 OPENAI_API_KEY=your_key_here
 OPENAI_MODEL=gpt-4.1-mini
 ```
+
 Optional:
-```
+```bash
 CODEX_LEDGER_USE_LLM_SUMMARY=1
-CODEX_LEDGER_LOG_LEVEL=info
-CODEX_LEDGER_LOG_FORMAT=text
 CODEX_LEDGER_TRACKING_POLICY=mirror-only
 ```
 
-## Quickstart (hook-based)
-1) Install the git hook:
+## Quickstart
 ```bash
 ledger hooks:install
-```
-2) (Optional) Add prompt attribution for the next commit:
-```bash
 ledger annotate "Refactor login to use JWT" --model gpt-4.1-mini
+git add .
+git commit -m "feat: update login flow"
 ```
-3) Make changes and commit as usual.
-4) Review `.codex-ledger/traces/<commit>.md` and `.json` in your repo.
 
-## Quickstart (explicit AI run)
-```bash
-ledger do "Add a hello.py that prints hello world"
-```
-This creates an ai/* branch, applies the patch, commits, writes a trace, and returns you to your original branch.
+Then inspect:
+- `.codex-ledger/traces/`
+- `.codex-ledger/reports/`
 
-## 0.2.0 Core Audit Commands
+## Core Commands
 Session lifecycle:
 ```bash
 ledger session:open "refactor auth"
@@ -59,7 +51,7 @@ ledger session:archive
 ledger session:reopen --session <session_id>
 ```
 
-Tracking policy:
+Policy:
 ```bash
 ledger policy:get --json
 ledger policy:set merge-ai --json
@@ -77,13 +69,8 @@ ledger timeline --json
 ledger explain <commit_hash> --json
 ledger diff-report --json
 ```
-Reports are written to `.codex-ledger/reports/`.
 
-## Diagnostics
+Diagnostics:
 ```bash
-ledger doctor
+ledger doctor --json
 ```
-Use `--json` for machine-readable output.
-
-## Demo scripts
-See `scripts/demo.ps1` (Windows) and `scripts/demo.sh` (bash) for a full end-to-end flow.
