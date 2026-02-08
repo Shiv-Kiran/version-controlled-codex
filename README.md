@@ -15,7 +15,7 @@ npm pack
 ```
 Then test in another repo:
 ```bash
-npx ..\version-controlled-codex\codex-ledger-0.1.0.tgz --help
+npx ..\version-controlled-codex\codex-ledger-0.1.1.tgz --help
 ```
 
 ## Config
@@ -29,6 +29,7 @@ Optional:
 CODEX_LEDGER_USE_LLM_SUMMARY=1
 CODEX_LEDGER_LOG_LEVEL=info
 CODEX_LEDGER_LOG_FORMAT=text
+CODEX_LEDGER_TRACKING_POLICY=mirror-only
 ```
 
 ## Quickstart (hook-based)
@@ -48,6 +49,35 @@ ledger annotate "Refactor login to use JWT" --model gpt-4.1-mini
 ledger do "Add a hello.py that prints hello world"
 ```
 This creates an ai/* branch, applies the patch, commits, writes a trace, and returns you to your original branch.
+
+## 0.2.0 Core Audit Commands
+Session lifecycle:
+```bash
+ledger session:open "refactor auth"
+ledger session:close
+ledger session:archive
+ledger session:reopen --session <session_id>
+```
+
+Tracking policy:
+```bash
+ledger policy:get --json
+ledger policy:set merge-ai --json
+```
+
+Conflict workflow:
+```bash
+ledger conflict:status --json
+ledger conflict:resume --reason "resolved manually" --json
+```
+
+Audit reports:
+```bash
+ledger timeline --json
+ledger explain <commit_hash> --json
+ledger diff-report --json
+```
+Reports are written to `.codex-ledger/reports/`.
 
 ## Diagnostics
 ```bash
