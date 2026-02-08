@@ -3,6 +3,8 @@ import { getCurrentBranch, runGit } from '../infra';
 const AI_PREFIX = 'ai/';
 const SESSION_SUFFIX_PATTERN = /\/\d{4}-\d{2}-\d{2}-[a-f0-9]{8}$/;
 const EXPLORE_SUFFIX_PATTERN = /\/explore-\d{4}-\d{2}-\d{2}-[a-f0-9]{8}$/;
+const LEDGER_COMMIT_PREFIX = 'chore(ledger): capture trace for';
+const MAX_LEDGER_SKIP_DEPTH = 200;
 
 export type DivergenceStatus = 'in_sync' | 'ahead_human' | 'ahead_ai' | 'diverged';
 
@@ -61,6 +63,35 @@ function getMergeBase(leftRef: string, rightRef: string, cwd?: string): string |
   } catch {
     return undefined;
   }
+}
+
+function getCommitSubject(refName: string, cwd?: string): string {
+  return runGit(['log', '-1', '--pretty=%s', refName], { cwd }).stdout.trim();
+}
+
+function getParentCommit(refName: string, cwd?: string): string | undefined {
+  try {
+    return runGit(['rev-parse', `${refName}^`], { cwd }).stdout.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveComparableAiRef(aiBranch: string, cwd?: string): string {
+  let currentRef = aiBranch;
+  for (let i = 0; i < MAX_LEDGER_SKIP_DEPTH; i += 1) {
+    const subject = getCommitSubject(currentRef, cwd);
+    if (!subject.startsWith(LEDGER_COMMIT_PREFIX)) {
+      return currentRef;
+    }
+
+    const parent = getParentCommit(currentRef, cwd);
+    if (!parent) {
+      return currentRef;
+    }
+    currentRef = parent;
+  }
+  return currentRef;
 }
 
 function parseAheadBehind(leftRef: string, rightRef: string, cwd?: string): {
@@ -148,8 +179,9 @@ export function detectBranchDivergence(options: DetectDivergenceOptions = {}): D
     });
   }
 
-  const mergeBase = getMergeBase(humanBranch, aiBranch, cwd);
-  const counts = parseAheadBehind(humanBranch, aiBranch, cwd);
+  const comparableAiRef = resolveComparableAiRef(aiBranch, cwd);
+  const mergeBase = getMergeBase(humanBranch, comparableAiRef, cwd);
+  const counts = parseAheadBehind(humanBranch, comparableAiRef, cwd);
 
   let status: DivergenceStatus = 'in_sync';
   if (counts.aheadLeft > 0 && counts.aheadRight > 0) {

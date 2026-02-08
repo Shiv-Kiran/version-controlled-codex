@@ -22,6 +22,7 @@ export {
 } from './divergence';
 export type { DetectDivergenceOptions, DivergenceResult, DivergenceStatus } from './divergence';
 export {
+  DEFAULT_TRACKING_POLICY,
   isTrackingPolicy,
   parseTrackingPolicy,
   resolveTrackingPolicyAction,

@@ -16,7 +16,7 @@ export type PolicyResolution = {
   reason: string;
 };
 
-const DEFAULT_POLICY: TrackingPolicy = 'mirror-only';
+export const DEFAULT_TRACKING_POLICY: TrackingPolicy = 'mirror-only';
 const VALID_POLICIES: TrackingPolicy[] = ['mirror-only', 'rebase-ai', 'merge-ai', 'manual'];
 
 export function isTrackingPolicy(value: string | undefined): value is TrackingPolicy {
@@ -28,7 +28,7 @@ export function isTrackingPolicy(value: string | undefined): value is TrackingPo
 
 export function parseTrackingPolicy(
   value: string | undefined,
-  fallback: TrackingPolicy = DEFAULT_POLICY
+  fallback: TrackingPolicy = DEFAULT_TRACKING_POLICY
 ): TrackingPolicy {
   if (!value) {
     return fallback;
@@ -45,7 +45,7 @@ export function resolveTrackingPolicyAction(input: {
   policy?: TrackingPolicy;
   divergenceStatus: DivergenceStatus;
 }): PolicyResolution {
-  const policy = input.policy ?? DEFAULT_POLICY;
+  const policy = input.policy ?? DEFAULT_TRACKING_POLICY;
   const status = input.divergenceStatus;
 
   if (status === 'in_sync') {

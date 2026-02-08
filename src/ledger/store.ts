@@ -148,3 +148,21 @@ export function getSessionByBranch(branch: string, cwd?: string): SessionRecord 
   const sessions = listSessions(cwd);
   return sessions.find((session) => session.branch === branch);
 }
+
+export function updateSessionTrackingPolicy(
+  sessionId: string,
+  trackingPolicy: TrackingPolicy,
+  cwd?: string
+): SessionRecord {
+  const session = getSession(sessionId, cwd);
+  if (!session) {
+    throw new Error(`Session not found: ${sessionId}`);
+  }
+  return upsertSession(
+    {
+      ...session,
+      trackingPolicy,
+    },
+    cwd
+  );
+}

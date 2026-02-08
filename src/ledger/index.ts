@@ -20,6 +20,7 @@ export {
   getSession,
   listSessions,
   readSessionsIndex,
+  updateSessionTrackingPolicy,
   updateSessionStatus,
   upsertSession,
   writeSessionsIndex,

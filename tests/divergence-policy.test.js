@@ -96,6 +96,31 @@ test('detectBranchDivergence returns ahead_ai when ai branch has unique commits'
   }
 });
 
+test('detectBranchDivergence ignores ledger-only commits on ai mirror branch', () => {
+  const repoDir = initRepo();
+  try {
+    run('git', ['checkout', '-b', 'ai/main'], { cwd: repoDir });
+    run(
+      'git',
+      [
+        'commit',
+        '--allow-empty',
+        '-m',
+        'chore(ledger): capture trace for deadbee\n\nsource-branch: main\nsource-commit: deadbeef',
+      ],
+      { cwd: repoDir }
+    );
+    run('git', ['checkout', 'main'], { cwd: repoDir });
+
+    const result = core.detectBranchDivergence({ cwd: repoDir, humanBranch: 'main' });
+    assert.equal(result.status, 'in_sync');
+    assert.equal(result.aheadHuman, 0);
+    assert.equal(result.aheadAi, 0);
+  } finally {
+    cleanupRepo(repoDir);
+  }
+});
+
 test('detectBranchDivergence returns diverged when both branches changed', () => {
   const repoDir = initRepo();
   try {
